@@ -1,65 +1,123 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+
+type Video = {
+  id: number;
+  title: string;
+  url: string;
+};
 
 export default function Home() {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // ✅ LOCAL VIDEO DATA
+  const videos: Video[] = [
+    {
+      id: 1,
+      title: "Bunny",
+      url: "/videos/1.mp4",
+    },
+    // {
+    //   id: 2,
+    //   title: "Flower",
+    //   url: "/videos/flower.mp4",
+    // },
+  ];
+
+  const [current, setCurrent] = useState<Video>(videos[0]);
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  // ✅ ENTER FULLSCREEN
+  const enterFullscreen = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      if (!document.fullscreenElement) {
+        await video.requestFullscreen();
+      }
+    } catch (err) {
+      console.log("Fullscreen error:", err);
+    }
+  };
+
+  // ✅ USER CLICK (WAJIB buat autoplay + fullscreen di browser)
+  const handleUserInteraction = async () => {
+    setHasInteracted(true);
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      await video.play();
+      await enterFullscreen();
+    } catch (e) {
+      console.log("Play error:", e);
+    }
+  };
+
+  // ✅ UPDATE VIDEO TANPA RE-RENDER ELEMENT
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.src = current.url;
+    video.load();
+
+    video
+      .play()
+      .then(() => {
+        if (hasInteracted) enterFullscreen();
+      })
+      .catch(() => {});
+  }, [current, hasInteracted]);
+
+  // ✅ JAGA FULLSCREEN (kalau user keluar, paksa masuk lagi)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && hasInteracted) {
+        enterFullscreen();
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [hasInteracted]);
+
+  // ✅ NEXT VIDEO RANDOM (beda dari sebelumnya)
+  const handleEnded = () => {
+    let next;
+    do {
+      next = videos[Math.floor(Math.random() * videos.length)];
+    } while (next.id === current.id);
+
+    setCurrent(next);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div
+      className="relative w-full h-screen bg-black"
+      onClick={handleUserInteraction}
+    >
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover"
+        muted
+        playsInline
+        preload="auto"
+        autoPlay
+        onEnded={handleEnded}
+      />
+
+      {!hasInteracted && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-xl font-semibold">
+          Tap to Start
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
   );
 }
