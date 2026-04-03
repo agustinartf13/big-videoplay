@@ -11,21 +11,16 @@ type Video = {
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  // ✅ LOCAL VIDEO DATA
+  // ✅ LOCAL VIDEO
   const videos: Video[] = [
     {
       id: 1,
       title: "Bunny",
       url: "/videos/1.mp4",
     },
-    // {
-    //   id: 2,
-    //   title: "Flower",
-    //   url: "/videos/flower.mp4",
-    // },
   ];
 
-  const [current, setCurrent] = useState<Video>(videos[0]);
+  const [current] = useState<Video>(videos[0]);
   const [hasInteracted, setHasInteracted] = useState(false);
 
   // ✅ ENTER FULLSCREEN
@@ -42,7 +37,7 @@ export default function Home() {
     }
   };
 
-  // ✅ USER CLICK (WAJIB buat autoplay + fullscreen di browser)
+  // ✅ USER INTERACTION (WAJIB untuk autoplay + fullscreen)
   const handleUserInteraction = async () => {
     setHasInteracted(true);
 
@@ -57,7 +52,7 @@ export default function Home() {
     }
   };
 
-  // ✅ UPDATE VIDEO TANPA RE-RENDER ELEMENT
+  // ✅ LOAD VIDEO
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -73,7 +68,7 @@ export default function Home() {
       .catch(() => {});
   }, [current, hasInteracted]);
 
-  // ✅ JAGA FULLSCREEN (kalau user keluar, paksa masuk lagi)
+  // ✅ FORCE FULLSCREEN (kalau user keluar, masuk lagi)
   useEffect(() => {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && hasInteracted) {
@@ -88,14 +83,18 @@ export default function Home() {
     };
   }, [hasInteracted]);
 
-  // ✅ NEXT VIDEO RANDOM (beda dari sebelumnya)
+  // ✅ REPEAT VIDEO MANUAL (loop terus + tetap fullscreen)
   const handleEnded = () => {
-    let next;
-    do {
-      next = videos[Math.floor(Math.random() * videos.length)];
-    } while (next.id === current.id);
+    const video = videoRef.current;
+    if (!video) return;
 
-    setCurrent(next);
+    video.currentTime = 0;
+
+    video.play().then(() => {
+      if (hasInteracted) {
+        enterFullscreen();
+      }
+    });
   };
 
   return (
